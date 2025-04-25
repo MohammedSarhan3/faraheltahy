@@ -1,0 +1,167 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}تسجيل الدخول{% endblock %}
+
+{% block content %}
+<div class="min-vh-100 d-flex align-items-center py-5">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-11 col-sm-10 col-md-8 col-lg-6 col-xl-5">
+                <div class="card shadow-lg">
+                    <div class="card-body p-4 p-md-5">
+                        <div class="text-center mb-4">
+                            <div class="logo-wrapper mb-4">
+                                <img src="{% static 'img/chef.png' %}" alt="Chef Icon" class="logo-img">
+                            </div>
+                            <h2 class="brand-title mb-3">فرح الطاهي</h2>
+                            <p class="text-muted login-text">قم بتسجيل الدخول للوصول إلى لوحة التحكم</p>
+                        </div>
+
+                    {% if messages %}
+                    {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }}">
+                        {{ message }}
+                    </div>
+                    {% endfor %}
+                    {% endif %}
+
+                    <form method="post" class="login-form">
+                        {% csrf_token %}
+                        <div class="form-floating mb-3">
+                            <input type="text" class="form-control custom-input" id="username" name="username" placeholder="اسم المستخدم" required autofocus>
+                            <label for="username">اسم المستخدم</label>
+                        </div>
+                        <div class="form-floating mb-4">
+                            <input type="password" class="form-control custom-input" id="password" name="password" placeholder="كلمة المرور" required>
+                            <label for="password">كلمة المرور</label>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100 btn-lg login-btn">
+                            <i class="fas fa-sign-in-alt me-2"></i>تسجيل الدخول
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    body {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        min-height: 100vh;
+    }
+
+    .card {
+        border: none;
+        border-radius: 1.5rem;
+        backdrop-filter: blur(10px);
+        background: rgba(255, 255, 255, 0.95);
+        transition: transform 0.3s ease;
+    }
+
+    .card:hover {
+        transform: translateY(-5px);
+    }
+
+    .logo-wrapper {
+        width: 80px;
+        height: 80px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 50%;
+        padding: 15px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    }
+
+    .logo-img {
+        height: 100%;
+        width: auto;
+        filter: brightness(0);
+        transition: transform 0.3s ease;
+    }
+
+    .logo-wrapper:hover .logo-img {
+        transform: scale(1.1);
+    }
+
+    .brand-title {
+        font-size: calc(1.5rem + 0.5vw);
+        font-weight: 600;
+        color: #2c3e50;
+    }
+
+    .login-text {
+        font-size: 1rem;
+        color: #6c757d;
+    }
+
+    .custom-input {
+        height: 3.5rem;
+        font-size: 1rem;
+        border-radius: 0.75rem;
+        border: 2px solid #e9ecef;
+        transition: all 0.2s ease;
+    }
+
+    .custom-input:focus {
+        border-color: #007bff;
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.15);
+    }
+
+    .form-floating > label {
+        padding: 1rem;
+        color: #6c757d;
+    }
+
+    .login-btn {
+        height: 3.5rem;
+        font-size: 1.1rem;
+        border-radius: 0.75rem;
+        background: #007bff;
+        border: none;
+        transition: all 0.3s ease;
+    }
+
+    .login-btn:hover {
+        background: #0056b3;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0, 123, 255, 0.3);
+    }
+
+    @media (max-width: 768px) {
+        .card-body {
+            padding: 2rem !important;
+        }
+
+        .brand-title {
+            font-size: 1.5rem;
+        }
+
+        .login-text {
+            font-size: 0.9rem;
+        }
+
+        .custom-input {
+            height: 3.2rem;
+        }
+
+        .login-btn {
+            height: 3.2rem;
+            font-size: 1rem;
+        }
+    }
+
+    @media (max-width: 576px) {
+        .card-body {
+            padding: 1.5rem !important;
+        }
+
+        .logo-wrapper {
+            width: 60px;
+            height: 60px;
+            padding: 12px;
+        }
+    }
+</style>
+{% endblock %}

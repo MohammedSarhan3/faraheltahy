@@ -1,0 +1,6 @@
+Django==5.2
+django-crispy-forms==2.1
+crispy-bootstrap4==2023.1
+django-bootstrap4==24.1
+django-mathfilters==1.0.0
+django-pwa==2.0.1

@@ -1,0 +1,431 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ customer.name }}    
+    {% for invoice in invoices %}
+    <div class="modal fade" id="deleteInvoiceModal{{ invoice.id }}" tabindex="-1" aria-labelledby="deleteInvoiceModalLabel{{ invoice.id }}" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="deleteInvoiceModalLabel{{ invoice.id }}">تأكيد حذف الفاتورة</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    هل أنت متأكد من حذف الفاتورة رقم {{ invoice.invoice_number }}؟
+                </div>
+                <div class="modal-footer">
+                    <form method="POST">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="delete_invoice">
+                        <input type="hidden" name="invoice_id" value="{{ invoice.id }}">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                        <button type="submit" class="btn btn-danger">حذف</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4" dir="rtl">
+    <!-- Customer Info Card -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <h4 class="card-title mb-0">معلومات العميل</h4>
+                                <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#editCustomerModal">
+                                    <i class="fas fa-edit"></i> تعديل
+                                </button>
+                            </div>
+                            <p><strong>الاسم:</strong> {{ customer.name }}</p>
+                            <p><strong>رقم الهاتف:</strong> {{ customer.phone|default:"غير متوفر" }}</p>
+                            <p><strong>تاريخ الإضافة:</strong> {{ customer.date_added|date:"Y/m/d" }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h4 class="card-title mb-4">الإحصائيات</h4>
+                            <p><strong>إجمالي المشتريات:</strong> {{ total_amount|floatformat:2 }} جنيه</p>
+                            <p><strong>إجمالي المدفوعات:</strong> {{ total_paid|floatformat:2 }} جنيه</p>
+                            <p><strong>إجمالي المتبقي:</strong> {{ total_remaining|floatformat:2 }} جنيه</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Invoices List -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">فواتير العميل</h5>
+                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addInvoiceModal">
+                        <i class="fas fa-plus-circle"></i> إضافة فاتورة جديدة
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>رقم الفاتورة</th>
+                                    <th>التاريخ</th>
+                                    <th>نوع البالتة</th>
+                                    <th>عدد البالتات</th>
+                                    <th>سعر البالتة</th>
+                                    <th>المبلغ الإجمالي</th>
+                                    <th>المدفوع</th>
+                                    <th>المتبقي</th>
+                                    <th>الإجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for invoice in invoices %}
+                                <tr {% if invoice.remaining_amount > 0 %}class="table-danger"{% else %}class="table-success"{% endif %}>
+                                    <td>{{ invoice.invoice_number }}</td>
+                                    <td>{{ invoice.date|date:"Y/m/d" }}</td>
+                                    <td>{{ invoice.pallet_type }}</td>
+                                    <td>{{ invoice.pallets }}</td>
+                                    <td>{{ invoice.price_per_pallet|floatformat:2 }}</td>
+                                    <td>{{ invoice.total_amount|floatformat:2 }}</td>
+                                    <td>{{ invoice.paid_amount|floatformat:2 }}</td>
+                                    <td>{{ invoice.remaining_amount|floatformat:2 }}</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#editInvoiceModal{{ invoice.id }}">
+                                            <i class="fas fa-edit"></i> تعديل
+                                        </button>
+                                        <button class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#addPaymentModal{{ invoice.id }}">
+                                            <i class="fas fa-money-bill-wave"></i> دفعة
+                                        </button>
+                                        <button class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteInvoiceModal{{ invoice.id }}">
+                                            <i class="fas fa-trash"></i> حذف
+                                        </button>
+                                    </td>
+                                </tr>
+                                <!-- Payments Details Row -->
+                                <tr class="payment-details">
+                                    <td colspan="7">
+                                        <div class="ms-4">
+                                            <h6 class="mb-2">المدفوعات:</h6>
+                                            <table class="table table-sm">
+                                                <thead>
+                                                    <tr>
+                                                        <th>التاريخ</th>
+                                                        <th>المبلغ</th>
+                                                        <th>الإجراءات</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for payment in invoice.payments.all %}
+                                                    <tr>
+                                                        <td>{{ payment.date|date:"Y/m/d" }}</td>
+                                                        <td>{{ payment.amount|floatformat:2 }} جنيه</td>
+                                                        <td>
+                                                            <button class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#editPaymentModal{{ payment.id }}">
+                                                                <i class="fas fa-edit"></i>
+                                                            </button>
+                                                            <button class="btn btn-sm btn-danger ms-1" data-bs-toggle="modal" data-bs-target="#deletePaymentModal{{ payment.id }}">
+                                                                <i class="fas fa-trash"></i>
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                    {% empty %}
+                                                    <tr>
+                                                        <td colspan="3" class="text-center">لا توجد مدفوعات</td>
+                                                    </tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="7" class="text-center">لا توجد فواتير لهذا العميل</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+    <!-- Delete Invoice Modals -->
+    {% for invoice in invoices %}
+    <div class="modal fade" id="deleteInvoiceModal{{ invoice.id }}" tabindex="-1" aria-labelledby="deleteInvoiceModalLabel{{ invoice.id }}" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="deleteInvoiceModalLabel{{ invoice.id }}">تأكيد حذف الفاتورة</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    هل أنت متأكد من حذف الفاتورة رقم {{ invoice.invoice_number }}؟
+                </div>
+                <div class="modal-footer">
+                    <form method="POST">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="delete_invoice">
+                        <input type="hidden" name="invoice_id" value="{{ invoice.id }}">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                        <button type="submit" class="btn btn-danger">حذف</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+{% endblock %}
+
+{% block modals %}
+<!-- Edit Customer Modal -->
+<div class="modal fade" id="editCustomerModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="edit_customer">
+                <div class="modal-header">
+                    <h5 class="modal-title">تعديل معلومات العميل</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="edit_customer_name" class="form-label">اسم العميل</label>
+                        <input type="text" class="form-control" id="edit_customer_name" name="name" required value="{{ customer.name }}">
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_customer_phone" class="form-label">رقم الهاتف</label>
+                        <input type="text" class="form-control" id="edit_customer_phone" name="phone" value="{{ customer.phone }}">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-primary">حفظ التغييرات</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Add Invoice Modal -->
+<div class="modal fade" id="addInvoiceModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="add_invoice">
+                <input type="hidden" name="customer" value="{{ customer.id }}">
+                <div class="modal-header">
+                    <h5 class="modal-title">إضافة فاتورة جديدة</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="date" class="form-label">التاريخ</label>
+                        <input type="date" class="form-control" id="date" name="date" required value="{% now 'Y-m-d' %}">
+                    </div>
+                    <div class="mb-3">
+                        <label for="pallet_type" class="form-label">نوع البالتة</label>
+                        <select class="form-select" id="pallet_type" name="pallet_type" required>
+                            {% for pallet_type in pallet_types %}
+                            <option value="{{ pallet_type.id }}" {% if pallet_type|stringformat:'s' == '9k رفيع' %}selected{% endif %}>
+                                {{ pallet_type }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="pallets" class="form-label">عدد البالتات</label>
+                        <input type="number" class="form-control" id="pallets" name="pallets" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="price_per_pallet" class="form-label">سعر البالتة</label>
+                        <input type="number" step="0.01" class="form-control" id="price_per_pallet" name="price_per_pallet" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="initial_payment" class="form-label">الدفعة الأولى (اختياري)</label>
+                        <input type="number" step="0.01" class="form-control" id="initial_payment" name="initial_payment">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-primary">حفظ</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% for invoice in invoices %}
+<!-- Edit Invoice Modal -->
+<div class="modal fade" id="editInvoiceModal{{ invoice.id }}" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="edit_invoice">
+                <input type="hidden" name="invoice_id" value="{{ invoice.id }}">
+                <div class="modal-header">
+                    <h5 class="modal-title">تعديل الفاتورة #{{ invoice.invoice_number }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="date{{ invoice.id }}" class="form-label">التاريخ</label>
+                        <input type="date" class="form-control" id="date{{ invoice.id }}" name="date" required value="{{ invoice.date|date:'Y-m-d' }}">
+                    </div>
+                    <div class="mb-3">
+                        <label for="pallet_type{{ invoice.id }}" class="form-label">نوع البالتة</label>
+                        <select class="form-select" id="pallet_type{{ invoice.id }}" name="pallet_type" required>
+                            {% for pallet_type in pallet_types %}
+                            <option value="{{ pallet_type.id }}" 
+                                {% if invoice.pallet_type.id == pallet_type.id %}selected
+                                {% elif pallet_type|stringformat:'s' == '9k رفيع' and not invoice.pallet_type %}selected{% endif %}>
+                                {{ pallet_type }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="pallets{{ invoice.id }}" class="form-label">عدد البالتات</label>
+                        <input type="number" class="form-control" id="pallets{{ invoice.id }}" name="pallets" required value="{{ invoice.pallets }}">
+                    </div>
+                    <div class="mb-3">
+                        <label for="price_per_pallet{{ invoice.id }}" class="form-label">سعر البالتة</label>
+                        <input type="number" step="0.01" class="form-control" id="price_per_pallet{{ invoice.id }}" name="price_per_pallet" required value="{{ invoice.price_per_pallet }}">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-primary">حفظ التغييرات</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Add Payment Modal -->
+<div class="modal fade" id="addPaymentModal{{ invoice.id }}" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="add_payment">
+                <input type="hidden" name="invoice_id" value="{{ invoice.id }}">
+                <div class="modal-header">
+                    <h5 class="modal-title">إضافة دفعة للفاتورة #{{ invoice.invoice_number }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="payment_date{{ invoice.id }}" class="form-label">التاريخ</label>
+                        <input type="date" class="form-control" id="payment_date{{ invoice.id }}" name="payment_date" required value="{% now 'Y-m-d' %}">
+                    </div>
+                    <div class="mb-3">
+                        <label for="payment_amount{{ invoice.id }}" class="form-label">المبلغ</label>
+                        <input type="number" step="0.01" class="form-control" id="payment_amount{{ invoice.id }}" name="payment_amount" required>
+                        <small class="text-muted">المبلغ المتبقي: {{ invoice.remaining_amount|floatformat:2 }} جنيه</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-primary">إضافة الدفعة</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% for payment in invoice.payments.all %}
+<!-- Edit Payment Modal -->
+<div class="modal fade" id="editPaymentModal{{ payment.id }}" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="edit_payment">
+                <input type="hidden" name="payment_id" value="{{ payment.id }}">
+                <div class="modal-header">
+                    <h5 class="modal-title">تعديل الدفعة</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="edit_payment_date{{ payment.id }}" class="form-label">التاريخ</label>
+                        <input type="date" class="form-control" id="edit_payment_date{{ payment.id }}" name="payment_date" required value="{{ payment.date|date:'Y-m-d' }}">
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_payment_amount{{ payment.id }}" class="form-label">المبلغ</label>
+                        <input type="number" step="0.01" class="form-control" id="edit_payment_amount{{ payment.id }}" name="payment_amount" required value="{{ payment.amount }}">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-primary">حفظ التغييرات</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Payment Modal -->
+<div class="modal fade" id="deletePaymentModal{{ payment.id }}" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="delete_payment">
+                <input type="hidden" name="payment_id" value="{{ payment.id }}">
+                <div class="modal-header">
+                    <h5 class="modal-title">حذف الدفعة</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-0">هل أنت متأكد من حذف هذه الدفعة؟</p>
+                    <p class="text-muted">التاريخ: {{ payment.date|date:"Y/m/d" }}<br>المبلغ: {{ payment.amount|floatformat:2 }} جنيه</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-danger">حذف</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endfor %}
+{% endfor %}
+    <!-- Delete Invoice Modals -->
+    {% for invoice in invoices %}
+    <div class="modal fade" id="deleteInvoiceModal{{ invoice.id }}" tabindex="-1" aria-labelledby="deleteInvoiceModalLabel{{ invoice.id }}" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="deleteInvoiceModalLabel{{ invoice.id }}">تأكيد حذف الفاتورة</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    هل أنت متأكد من حذف الفاتورة رقم {{ invoice.invoice_number }}؟
+                </div>
+                <div class="modal-footer">
+                    <form method="POST">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="delete_invoice">
+                        <input type="hidden" name="invoice_id" value="{{ invoice.id }}">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                        <button type="submit" class="btn btn-danger">حذف</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+{% endblock %}

@@ -1,0 +1,691 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}إدارة الصندوق{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="text-center mb-4">نظام إدارة الصندوق</h2>
+    <div class="row justify-content-center">
+        <div class="col-12">
+            <!-- Modal for Adding New Balance -->
+            <div class="modal fade" id="addBalanceModal" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">إضافة رصيد جديد</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <form method="post">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="add_balance">
+                                <div class="mb-3">
+                                    <label class="form-label">المبلغ</label>
+                                    <input type="number" step="0.01" name="amount" class="form-control" required>
+                                </div>
+                                <button type="submit" class="btn btn-primary w-100">إضافة رصيد جديد</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Balances List with Transactions -->
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">قائمة الأرصدة</h5>
+                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addBalanceModal">
+                        <i class="fas fa-plus me-1"></i>
+                        إضافة رصيد جديد
+                    </button>
+                </div>
+                <div class="card-body">
+                    {% for balance in balances %}
+                    <!-- Balance Card -->
+                <div class="card mb-4 balance-card">                <div class="card-header">
+                    <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center">
+                        <h5 class="card-title mb-2 mb-sm-0">رصيد رقم {{ balance.number }}</h5>
+                        <div class="btn-group-sm mt-2 mt-sm-0">
+                            <button type="button" class="btn btn-primary me-1 mb-1 mb-sm-0" data-bs-toggle="modal" data-bs-target="#editBalanceModal{{ balance.number }}">
+                                <i class="fas fa-edit me-1"></i>
+                                <span class="d-none d-md-inline">تعديل</span>
+                            </button>
+                            <button type="button" class="btn btn-danger me-1 mb-1 mb-sm-0" data-bs-toggle="modal" data-bs-target="#deleteBalanceModal{{ balance.number }}">
+                                <i class="fas fa-trash me-1"></i>
+                                <span class="d-none d-md-inline">حذف</span>
+                            </button>
+                            {% if balance.remaining > 0 %}
+                            <button type="button" class="btn btn-warning mb-1 mb-sm-0" data-bs-toggle="modal" data-bs-target="#withdrawModal{{ balance.number }}">
+                                <i class="fas fa-minus-circle me-1"></i>
+                                <span class="d-none d-md-inline">سحب من الرصيد</span>
+                            </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                    <div class="card-body">
+                    <div class="balance-info">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="balance-amount">
+                                    <i class="fas fa-coins me-2 text-warning"></i>
+                                    المبلغ الأصلي: <strong>{{ balance.amount|floatformat:2 }} ج.م</strong>
+                                </div>
+                                <div class="balance-amount mt-2">
+                                    <i class="fas fa-wallet me-2 {% if balance.remaining > 0 %}text-success{% else %}text-danger{% endif %}"></i>
+                                    المتبقي: <strong class="{% if balance.remaining > 0 %}text-success{% else %}text-danger{% endif %}">
+                                        {{ balance.remaining|floatformat:2 }} ج.م
+                                    </strong>
+                                </div>
+                            </div>
+                            <div class="text-end">
+                                <div class="text-muted mb-1">
+                                    <i class="fas fa-calendar-alt me-1"></i>
+                                    تاريخ الإضافة
+                                </div>
+                                <strong>{{ balance.date_added }}</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Transactions Table for this Balance -->
+                    <h6 class="text-secondary mb-3">
+                        <i class="fas fa-history me-2"></i>
+                        سجل المعاملات
+                    </h6>
+                    
+                    <!-- Mobile Card View (shown only on small screens) -->
+                    <div class="d-md-none">
+                        {% for transaction in balance.transactions.all %}
+                        <div class="card transaction-card mb-3">
+                            <div class="card-body p-3">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="text-muted">
+                                        <i class="fas fa-calendar-day me-1"></i>
+                                        {{ transaction.date }}
+                                    </span>
+                                    <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteTransactionModal{{ transaction.id }}">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                                <div class="row g-2">
+                                    <div class="col-6">
+                                        <div class="text-muted">المبلغ المسحوب:</div>
+                                        <div class="text-danger fw-bold">
+                                            <i class="fas fa-minus-circle me-1"></i>
+                                            {{ transaction.amount|floatformat:2 }} ج.م
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="text-muted">المتبقي:</div>
+                                        <div class="fw-bold">
+                                            {{ transaction.get_balance_after|floatformat:2 }} ج.م
+                                        </div>
+                                    </div>
+                                    <div class="col-12 mt-2">
+                                        <div class="text-muted">السبب:</div>
+                                        <div>{{ transaction.reason }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="empty-state py-4">
+                            <i class="fas fa-receipt d-block mb-3"></i>
+                            <p class="text-muted mb-0">لا توجد سحوبات من هذا الرصيد</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <!-- Desktop Table View (hidden on small screens) -->
+                    <div class="d-none d-md-block table-responsive transactions-table">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="text-center">التاريخ</th>
+                                    <th class="text-center">المبلغ المسحوب</th>
+                                    <th class="text-center">السبب</th>
+                                    <th class="text-center">المتبقي</th>
+                                    <th class="text-center">إجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for transaction in balance.transactions.all %}
+                                <tr>
+                                    <td class="text-center">
+                                        <i class="fas fa-calendar-day me-1 text-muted"></i>
+                                        {{ transaction.date }}
+                                    </td>
+                                    <td class="text-center text-danger fw-bold">
+                                        <i class="fas fa-minus-circle me-1"></i>
+                                        {{ transaction.amount|floatformat:2 }} ج.م
+                                    </td>
+                                    <td class="text-center">{{ transaction.reason }}</td>
+                                    <td class="text-center fw-bold">
+                                        {{ transaction.get_balance_after|floatformat:2 }} ج.م
+                                    </td>
+                                    <td class="text-center">
+                                        <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteTransactionModal{{ transaction.id }}">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4">
+                                        <div class="empty-state py-4">
+                                            <i class="fas fa-receipt d-block mb-3"></i>
+                                            <p class="text-muted mb-0">لا توجد سحوبات من هذا الرصيد</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="empty-state">
+                <i class="fas fa-wallet d-block mb-3"></i>
+                <p class="text-muted mb-0">لا توجد أرصدة حتى الآن</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+</div>
+
+<!-- Withdraw Modals (Add these at the end before the endblock) -->
+{% for balance in balances %}
+{% if balance.remaining > 0 %}
+<div class="modal fade withdraw-modal" id="withdrawModal{{ balance.number }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">سحب من الرصيد رقم {{ balance.number }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    المتبقي في الرصيد: <strong>{{ balance.remaining|floatformat:2 }} ج.م</strong>
+                </div>
+                <form method="post" class="needs-validation" novalidate>
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="withdraw">
+                    <input type="hidden" name="balance_number" value="{{ balance.number }}">
+                    
+                    <div class="mb-3">
+                        <label class="form-label">المبلغ</label>
+                        <div class="input-group">
+                            <span class="input-group-text">ج.م</span>
+                            <input type="number" step="0.01" name="amount" max="{{ balance.remaining }}" class="form-control form-control-lg" required>
+                            <div class="invalid-feedback">
+                                برجاء إدخال مبلغ (لا يتجاوز {{ balance.remaining|floatformat:2 }} ج.م)
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">السبب</label>
+                        <input type="text" name="reason" class="form-control" required>
+                        <div class="invalid-feedback">
+                            برجاء إدخال سبب السحب
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">التاريخ</label>
+                        <input type="date" name="date" class="form-control" required>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-danger w-100">
+                        <i class="fas fa-check-circle me-1"></i>
+                        تأكيد السحب
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endfor %}
+
+<!-- Edit Balance Modals -->
+{% for balance in balances %}
+<div class="modal fade" id="editBalanceModal{{ balance.number }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">تعديل الرصيد رقم {{ balance.number }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="edit_balance">
+                    <input type="hidden" name="balance_number" value="{{ balance.number }}">
+                    
+                    <div class="mb-3">
+                        <label class="form-label">المبلغ</label>
+                        <div class="input-group">
+                            <span class="input-group-text">ج.م</span>
+                            <input type="number" step="0.01" name="amount" value="{{ balance.amount }}" class="form-control form-control-lg" required>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">تاريخ الإضافة</label>
+                        <input type="date" name="date_added" value="{{ balance.date_added|date:'Y-m-d' }}" class="form-control" required>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-save me-1"></i>
+                        حفظ التغييرات
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Balance Modal -->
+<div class="modal fade" id="deleteBalanceModal{{ balance.number }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-danger">حذف الرصيد رقم {{ balance.number }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    هل أنت متأكد من حذف الرصيد رقم <strong>{{ balance.number }}</strong> ومبلغه <strong>{{ balance.amount|floatformat:2 }} ج.م</strong>؟
+                    
+                    {% if balance.transactions.all %}
+                    <p class="mt-2 mb-0">تحذير: سيتم حذف جميع المعاملات المرتبطة بهذا الرصيد ({{ balance.transactions.all|length }} معاملة).</p>
+                    {% endif %}
+                </div>
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="delete_balance">
+                    <input type="hidden" name="balance_number" value="{{ balance.number }}">
+                    
+                    <div class="d-flex justify-content-end">
+                        <button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">إلغاء</button>
+                        <button type="submit" class="btn btn-danger">
+                            <i class="fas fa-trash me-1"></i>
+                            تأكيد الحذف
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+<!-- Transaction Edit and Delete Modals -->
+{% for balance in balances %}
+    {% for transaction in balance.transactions.all %}
+    <div class="modal fade" id="editTransactionModal{{ transaction.id }}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">تعديل المعاملة</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info mb-4">
+                        <div class="row">
+                            <div class="col-12">
+                                <strong>رصيد رقم:</strong> {{ transaction.balance_entry.number }}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <form method="post" class="needs-validation" novalidate>
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="edit_transaction">
+                        <input type="hidden" name="transaction_id" value="{{ transaction.id }}">
+                        
+                        <div class="mb-3">
+                            <label class="form-label">المبلغ</label>
+                            <div class="input-group">
+                                <span class="input-group-text">ج.م</span>
+                                <input type="number" step="0.01" name="amount" value="{{ transaction.amount }}" class="form-control" readonly>
+                                <input type="hidden" name="amount" value="{{ transaction.amount }}">
+                            </div>
+                            <small class="text-muted">لا يمكن تعديل المبلغ المسحوب</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">السبب</label>
+                            <input type="text" name="reason" value="{{ transaction.reason }}" class="form-control" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">التاريخ</label>
+                            <input type="date" name="date" value="{{ transaction.date|date:'Y-m-d' }}" class="form-control" required>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-save me-1"></i>
+                            حفظ التغييرات
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Transaction Modal -->
+    <div class="modal fade" id="deleteTransactionModal{{ transaction.id }}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title text-danger">حذف المعاملة</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        هل أنت متأكد من حذف المعاملة بقيمة <strong>{{ transaction.amount|floatformat:2 }} ج.م</strong>؟
+                        <p class="mt-2 mb-0">سبب المعاملة: {{ transaction.reason }}</p>
+                    </div>
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="delete_transaction">
+                        <input type="hidden" name="transaction_id" value="{{ transaction.id }}">
+                        
+                        <div class="d-flex justify-content-end">
+                            <button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">إلغاء</button>
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-trash me-1"></i>
+                                تأكيد الحذف
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+{% endfor %}
+
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    body.modal-open {
+        overflow: hidden;
+        padding-right: 0 !important;
+    }
+
+    .card {
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        border-radius: 0.5rem;
+        border: none;
+        margin-bottom: 1.5rem;
+    }
+    
+    .card-header {
+        background-color: #fff;
+        border-bottom: 1px solid rgba(0,0,0,.125);
+        padding: 1rem;
+    }
+    
+    .table {
+        margin-bottom: 0;
+    }
+    
+    .table td, .table th {
+        padding: 1rem;
+        vertical-align: middle;
+    }
+    
+    /* Enhanced Modal Styles */
+    .withdraw-modal {
+        z-index: 1055 !important;
+        transition: opacity 0.15s linear !important;
+    }
+    
+    .modal-backdrop {
+        z-index: 1050 !important;
+        opacity: 0;
+        transition: opacity 0.15s linear !important;
+    }
+    
+    .modal-backdrop.show {
+        opacity: 0.5;
+    }
+    
+    .withdraw-modal .modal-dialog {
+        transform: none !important;
+        opacity: 0;
+        transition: opacity 0.15s linear !important;
+        margin: 1.75rem auto;
+    }
+    
+    .withdraw-modal.show .modal-dialog {
+        opacity: 1;
+    }
+    
+    .withdraw-modal .modal-content {
+        border: none;
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    }
+    
+    .withdraw-modal .alert {
+        border: none;
+        background-color: rgba(13, 202, 240, 0.1);
+    }
+    
+    .withdraw-modal input.form-control {
+        padding: 0.75rem 1rem;
+    }
+    
+    .withdraw-modal .was-validated .form-control:invalid {
+        border-color: #dc3545;
+        padding-right: calc(1.5em + 0.75rem);
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' width='12' height='12' fill='none' stroke='%23dc3545'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath stroke-linejoin='round' d='M5.8 3.6h.4L6 6.5z'/%3e%3ccircle cx='6' cy='8.2' r='.6' fill='%23dc3545' stroke='none'/%3e%3c/svg%3e");
+        background-repeat: no-repeat;
+        background-position: right calc(0.375em + 0.1875rem) center;
+        background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
+    }
+    
+    .balance-summary {
+        background: linear-gradient(45deg, #f8f9fa, #ffffff);
+        box-shadow: inset 0 0 10px rgba(0,0,0,0.05);
+    }
+    
+    .form-control {
+        transition: all 0.2s ease;
+        border: 2px solid #e9ecef;
+    }
+    
+    .form-control:focus {
+        border-color: #0d6efd;
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.1);
+    }
+    
+    .form-control-lg {
+        font-size: 1.25rem;
+        font-weight: bold;
+    }
+    
+    .input-group-text {
+        background: #f8f9fa;
+        border: 2px solid #e9ecef;
+        border-right: none;
+        font-weight: bold;
+    }
+    
+    .btn {
+        transition: all 0.2s ease;
+    }
+    
+    .btn:hover {
+        transform: translateY(-1px);
+    }
+    
+    .btn:active {
+        transform: translateY(0);
+    }
+    
+    .modal-content {
+        overflow: hidden;
+    }
+    
+    .modal-header, .modal-footer {
+        background: #ffffff;
+    }
+    
+    .modal-body {
+        background: #ffffff;
+        padding: 2rem;
+    }
+    
+    .empty-state {
+        padding: 3rem 2rem;
+        text-align: center;
+    }
+    
+    .empty-state i {
+        font-size: 3rem;
+        color: #dee2e6;
+        margin-bottom: 1rem;
+    }
+    
+    .balance-card {
+        transition: all 0.3s ease;
+    }
+    
+    .balance-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+    }
+
+    .table-responsive {
+        border-radius: 0.5rem;
+        overflow: hidden;
+    }
+
+    .balance-amount {
+        font-size: 1.25rem;
+    }
+
+    .balance-info {
+        background: #f8f9fa;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        margin-bottom: 1rem;
+    }
+
+    .transactions-table {
+        background: white;
+        border-radius: 0.5rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+
+    /* Modal Stability Fixes */
+    body.modal-open {
+        overflow: hidden;
+    }
+    
+    .modals-container {
+        position: relative;
+        z-index: 1060;
+    }
+    
+    .modal {
+        pointer-events: none;
+        transition: opacity 0.15s linear !important;
+    }
+    
+    .modal.fade {
+        opacity: 0;
+    }
+    
+    .modal.fade.show {
+        opacity: 1;
+        pointer-events: auto;
+    }
+    
+    .modal-dialog {
+        pointer-events: auto;
+        transform: none !important;
+    }
+    
+    .modal-backdrop {
+        pointer-events: auto;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Form validation
+        const forms = document.querySelectorAll('.needs-validation');
+        forms.forEach(form => {
+            form.addEventListener('submit', function(event) {
+                if (!form.checkValidity()) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+                form.classList.add('was-validated');
+            });
+        });
+
+        // Set default date and validate amount inputs
+        const amountInputs = document.querySelectorAll('input[name="amount"]');
+        amountInputs.forEach(input => {
+            input.addEventListener('input', function() {
+                const max = parseFloat(this.max);
+                const value = parseFloat(this.value);
+                if (value > max) {
+                    this.value = max;
+                }
+                if (value < 0) {
+                    this.value = 0;
+                }
+            });
+        });
+
+        // Set today's date as default
+        const today = new Date().toISOString().split('T')[0];
+        document.querySelectorAll('input[type="date"]').forEach(input => {
+            input.value = today;
+        });
+
+        // Modal handling
+        const withdrawModals = document.querySelectorAll('.withdraw-modal');
+        withdrawModals.forEach(modalEl => {
+            const modal = new bootstrap.Modal(modalEl, {
+                backdrop: 'static'
+            });
+
+            // Clean up when modal is hidden
+            modalEl.addEventListener('hidden.bs.modal', function() {
+                const form = this.querySelector('form');
+                form.classList.remove('was-validated');
+                form.reset();
+                document.querySelectorAll('input[type="date"]').forEach(input => {
+                    input.value = today;
+                });
+            });
+
+            // Prevent modal from closing when clicking outside
+            modalEl.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    e.stopPropagation();
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

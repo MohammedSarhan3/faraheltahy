@@ -1,0 +1,185 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}العملاء{% endblock %}
+
+{% block extra_css %}
+<style>
+    .hover-overlay:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    }
+    
+    .table th {
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.875rem;
+        letter-spacing: 0.5px;
+    }
+
+    .table td {
+        padding: 1rem 0.75rem;
+    }
+
+    .card {
+        border: none;
+        border-radius: 0.75rem;
+    }
+
+    .card-header {
+        border-bottom: 1px solid rgba(0,0,0,.05);
+    }
+
+    .table-responsive {
+        padding: 0.5rem;
+    }
+
+    .btn-primary {
+        padding: 0.5rem 1.5rem;
+        border-radius: 0.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4" dir="rtl">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-light py-3">
+                    <div class="row align-items-center">
+                        <div class="col-md-4">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-users me-2 text-primary"></i>
+                                <h5 class="card-title mb-0">قائمة العملاء</h5>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <form method="get" class="mb-0">
+                                <div class="input-group">
+                                    <select class="form-select" name="customer_search" onchange="this.form.submit()">
+                                        <option value="">كل العملاء</option>
+                                        {% for customer_name in all_customer_names %}
+                                        <option value="{{ customer_name }}" {% if request.GET.customer_search == customer_name %}selected{% endif %}>
+                                            {{ customer_name }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                    {% if request.GET.customer_search %}
+                                    <a href="?" class="btn btn-outline-secondary">
+                                        <i class="fas fa-times"></i>
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </form>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <button type="button" class="btn btn-primary d-inline-flex align-items-center" data-bs-toggle="modal" data-bs-target="#addCustomerModal">
+                                <i class="fas fa-plus-circle me-2"></i> إضافة عميل
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th><i class="fas fa-user me-2"></i>الاسم</th>
+                                    <th><i class="fas fa-phone me-2"></i>رقم الهاتف</th>
+                                    <th><i class="fas fa-shopping-cart me-2"></i>إجمالي المشتريات</th>
+                                    <th><i class="fas fa-money-bill-wave me-2"></i>المتبقي</th>
+                                    <th><i class="fas fa-calendar me-2"></i>تاريخ الإضافة</th>
+                                </tr>
+                            </thead>
+                            <tbody class="align-middle">
+                                {% for customer in customers %}
+                                <tr class="{% if customer.remaining > 0 %}table-danger{% else %}table-success{% endif %} hover-overlay" 
+                                    style="transition: all 0.2s ease;">
+                                    <td class="fw-bold" onclick="window.location='{% url 'invoices:customer_detail' customer.pk %}'" 
+                                        style="cursor: pointer;">{{ customer.name }}</td>
+                                    <td onclick="window.location='{% url 'invoices:customer_detail' customer.pk %}'" 
+                                        style="cursor: pointer;">{{ customer.phone|default:"-" }}</td>
+                                    <td onclick="window.location='{% url 'invoices:customer_detail' customer.pk %}'" 
+                                        style="cursor: pointer;">{{ customer.total_amount|floatformat:2 }} جنيه</td>
+                                    <td onclick="window.location='{% url 'invoices:customer_detail' customer.pk %}'" 
+                                        style="cursor: pointer;" 
+                                        class="{% if customer.remaining > 0 %}fw-bold text-danger{% else %}fw-bold text-success{% endif %}">
+                                        {{ customer.remaining|floatformat:2 }} جنيه
+                                    </td>
+                                    <td>
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <span onclick="window.location='{% url 'invoices:customer_detail' customer.pk %}'" 
+                                                  style="cursor: pointer;">
+                                                {{ customer.date_added|date:"Y/m/d" }}
+                                            </span>
+                                            <form method="post" action="{% url 'invoices:delete_customer' customer.pk %}" style="display: inline;" 
+                                                  onsubmit="return confirm('هل أنت متأكد من حذف العميل {{ customer.name }}؟\nسيتم حذف جميع الفواتير والمدفوعات المرتبطة بهذا العميل');">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+
+                                {% empty %}
+                                <tr>
+                                    <td colspan="5" class="text-center py-5">
+                                        <i class="fas fa-users text-muted mb-3" style="font-size: 3rem;"></i>
+                                        <p class="h5 text-muted mt-3">لا يوجد عملاء</p>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Customer Modal -->
+<div class="modal fade" id="addCustomerModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="{% url 'invoices:add_customer' %}">
+                {% csrf_token %}
+                <div class="modal-header border-bottom-0 pb-0">
+                    <h5 class="modal-title fw-bold">
+                        <i class="fas fa-user-plus me-2 text-primary"></i>
+                        إضافة عميل جديد
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body pt-4">
+                    <div class="mb-4">
+                        <label for="name" class="form-label fw-bold">
+                            <i class="fas fa-user me-2 text-primary"></i>اسم العميل
+                        </label>
+                        <input type="text" class="form-control form-control-lg" id="name" name="name" required 
+                               placeholder="ادخل اسم العميل">
+                    </div>
+                    <div class="mb-4">
+                        <label for="phone" class="form-label fw-bold">
+                            <i class="fas fa-phone me-2 text-primary"></i>رقم الهاتف
+                        </label>
+                        <input type="text" class="form-control form-control-lg" id="phone" name="phone" 
+                               placeholder="ادخل رقم الهاتف">
+                    </div>
+                </div>
+                <div class="modal-footer border-top-0">
+                    <button type="button" class="btn btn-lg btn-light" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>إلغاء
+                    </button>
+                    <button type="submit" class="btn btn-lg btn-primary">
+                        <i class="fas fa-save me-2"></i>حفظ
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,327 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load mathfilters %}
+{% load inventory_filters %}
+
+{% block title %}لوحة التحكم{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4" dir="rtl">
+    <!-- Overview Cards -->
+    <div class="row g-3 mb-4">
+        <!-- Total IN Card -->
+        <div class="col-12 col-sm-6 col-xl-4">
+            <div class="card dashboard-card">
+                <div class="card-body position-relative overflow-hidden">
+                    <div class="dashboard-icon-bg bg-success-light"></div>
+                    <div class="d-flex align-items-center position-relative">
+                        <div class="flex-shrink-0 dashboard-icon-wrapper bg-success-light">
+                            <i class="bi bi-box-arrow-in-right fs-2 text-success"></i>
+                        </div>
+                        <div class="flex-grow-1 me-3">
+                            <h6 class="mb-1 text-muted">إجمالي الوارد</h6>
+                            <h3 class="mb-1 display-6 fw-bold">
+                                {{ total_in|format_weight }}
+                            </h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer bg-success-light border-0 py-2">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <small class="text-success">آخر تحديث: اليوم</small>
+                        <i class="bi bi-arrow-up-circle-fill text-success"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total OUT Card -->
+        <div class="col-12 col-sm-6 col-xl-4">
+            <div class="card dashboard-card">
+                <div class="card-body position-relative overflow-hidden">
+                    <div class="dashboard-icon-bg bg-danger-light"></div>
+                    <div class="d-flex align-items-center position-relative">
+                        <div class="flex-shrink-0 dashboard-icon-wrapper bg-danger-light">
+                            <i class="bi bi-box-arrow-left fs-2 text-danger"></i>
+                        </div>
+                        <div class="flex-grow-1 me-3">
+                            <h6 class="mb-1 text-muted">إجمالي الصادر</h6>
+                            <h3 class="mb-1 display-6 fw-bold">
+                                {{ total_out|format_weight }}
+                            </h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer bg-danger-light border-0 py-2">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <small class="text-danger">آخر تحديث: اليوم</small>
+                        <i class="bi bi-arrow-down-circle-fill text-danger"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Current Inventory Card -->
+        <div class="col-12 col-sm-6 col-xl-4">
+            <div class="card dashboard-card">
+                <div class="card-body position-relative overflow-hidden">
+                    <div class="dashboard-icon-bg bg-primary-light"></div>
+                    <div class="d-flex align-items-center position-relative">
+                        <div class="flex-shrink-0 dashboard-icon-wrapper bg-primary-light">
+                            <i class="bi bi-boxes fs-2 text-primary"></i>
+                        </div>
+                        <div class="flex-grow-1 me-3">
+                            <h6 class="mb-1 text-muted">المخزون الحالي</h6>
+                            <h3 class="mb-1 display-6 fw-bold">
+                                {% with tons=inventory_display.0 kilos=inventory_display.1 %}
+                                <div class="weight-display">
+                                    <div class="tons">{{ tons }} طن</div>
+                                    <div class="kilos">{{ kilos }} كيلو</div>
+                                </div>
+                                {% endwith %}
+                            </h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer bg-primary-light border-0 py-2">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <small class="text-primary">تم التحديث</small>
+                        <i class="bi bi-check-circle-fill text-primary"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Safe Overview -->
+    <div class="row g-3 mb-4">
+        <div class="col-12">
+            <div class="card dashboard-card">
+                <div class="card-header bg-warning-light border-0">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-safe2 fs-4 me-2 text-warning"></i>
+                        الخزنة
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-4">
+                        <!-- Total Collected from Customers -->
+                        <div class="col-md-4">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-shrink-0">
+                                    <div class="dashboard-icon-wrapper bg-success-light">
+                                        <i class="bi bi-cash-stack fs-2 text-success"></i>
+                                    </div>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <h6 class="mb-1 text-muted">المحصل من العملاء</h6>
+                                    <h4 class="mb-0 fw-bold text-success">{{ total_collected|floatformat:2 }} جنيه</h4>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Total Due from Customers -->
+                        <div class="col-md-4">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-shrink-0">
+                                    <div class="dashboard-icon-wrapper bg-danger-light">
+                                        <i class="bi bi-cash fs-2 text-danger"></i>
+                                    </div>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <h6 class="mb-1 text-muted">المستحق على العملاء</h6>
+                                    <h4 class="mb-0 fw-bold text-danger">{{ total_customer_due|floatformat:2 }} جنيه</h4>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Total Due to Suppliers -->
+                        <div class="col-md-4">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-shrink-0">
+                                    <div class="dashboard-icon-wrapper bg-info-light">
+                                        <i class="bi bi-truck fs-2 text-info"></i>
+                                    </div>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <h6 class="mb-1 text-muted">المستحق للموردين</h6>
+                                    <h4 class="mb-0 fw-bold text-info">{{ total_supplier_due|floatformat:2 }} جنيه</h4>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Supply Orders -->
+    
+
+    <!-- Recent Transactions -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">أحدث المعاملات</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>النوع</th>
+                                    <th>التاريخ</th>
+                                    <th>الكمية (طن)</th>
+                                    <th>المصدر</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for transaction in transactions %}
+                                <tr>
+                                    <td>
+                                        {% if transaction.transaction_type == 'IN' %}
+                                            <span class="badge bg-success">وارد</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">صادر</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ transaction.date|date:"Y/m/d" }}</td>
+                                    <td>{{ transaction.tons|floatformat:2 }}</td>
+                                    <td>
+                                        {% if transaction.supply_order %}
+                                            {{ transaction.supply_order.supplier_name }}
+                                        {% else %}
+                                            فاتورة بيع
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center">لا توجد معاملات حديثة</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<!-- Bootstrap Icons -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+<style>
+    /* RTL specific adjustments */
+    .me-3 {
+        margin-right: 1rem !important;
+        margin-left: 0 !important;
+    }
+    .table {
+        text-align: right;
+    }
+
+    /* Dashboard Cards */
+    .dashboard-card {
+        transition: all 0.3s ease;
+        border: none;
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        overflow: hidden;
+    }
+
+    .dashboard-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    }
+
+    .dashboard-icon-wrapper {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-left: 1rem;
+    }
+
+    .dashboard-icon-bg {
+        position: absolute;
+        top: -20px;
+        right: -20px;
+        width: 100px;
+        height: 100px;
+        border-radius: 50%;
+        opacity: 0.1;
+    }
+
+    /* Light Background Colors */
+    .bg-success-light {
+        background-color: rgba(25, 135, 84, 0.1);
+    }
+    
+    .bg-danger-light {
+        background-color: rgba(220, 53, 69, 0.1);
+    }
+    
+    .bg-primary-light {
+        background-color: rgba(13, 110, 253, 0.1);
+    }
+    
+    .bg-warning-light {
+        background-color: rgba(255, 193, 7, 0.1);
+    }
+
+    .bg-info-light {
+        background-color: rgba(13, 202, 240, 0.1);
+    }
+
+    /* Card Footer */
+    .card-footer {
+        background-color: transparent;
+    }
+
+    /* Typography */
+    .display-6 {
+        font-size: 1.8rem;
+        font-weight: 600;
+        direction: ltr;  /* Force left-to-right for numbers */
+        display: inline-block;
+    }
+
+    .small {
+        color: #6c757d;
+    }
+
+    /* Inventory Display */
+    .inventory-number {
+        font-feature-settings: "tnum";
+        font-variant-numeric: tabular-nums;
+    }
+
+    /* Weight Display */
+    .weight-display {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+    }
+
+    .weight-display .tons {
+        font-size: 2.2rem;
+        font-weight: 700;
+        color: #2c3e50;
+    }
+
+    .weight-display .kilos {
+        font-size: 1.4rem;
+        color: #64748b;
+        font-weight: 500;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Any additional JavaScript can go here -->
+{% endblock %}
